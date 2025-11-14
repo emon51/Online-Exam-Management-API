@@ -3,7 +3,7 @@
 __pycache__/
 
 backend/venv/
-backend/exam.db/
+backend/exam.db
 
 
 

@@ -40,7 +40,7 @@ async def users(db: Session=Depends(get_db)):
     
 
 @app.post("/login")
-def login_user(user: schemas.LoginModel, db: Session = Depends(get_db)):
+async def user_login(user: schemas.LoginModel, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found.")
@@ -48,3 +48,21 @@ def login_user(user: schemas.LoginModel, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid password.")
         
     return {"message": f"Welcome {db_user.username}", "role": db_user.role}
+
+
+@app.post("/add-question")
+async def add_question(question: schemas.QuestionModel, db: Session = Depends(get_db)):
+    db_question = models.Question(**question.dict())
+    db.add(db_question)
+    db.commit()
+    db.refresh(db_question)
+    return {"question": question.dict()}
+    
+
+@app.get("/questions")
+async def questions(db: Session = Depends(get_db)):
+    all_questions = db.query(models.Question).all()
+    if all_questions:
+        return all_questions
+    else:
+        raise HTTPException(status_code=404, detail="No questions found.")
