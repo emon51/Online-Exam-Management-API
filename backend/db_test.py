@@ -7,4 +7,4 @@ try:
         print("Database connected successfully.")
 except Exception as e:
     print("Database connection failed.")
-    print("Error:", e)
+    print("Error:", e) 
