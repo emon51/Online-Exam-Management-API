@@ -14,6 +14,9 @@ class UserModel(BaseModel):
     password: str 
     role: Role 
 
+    class Config:
+        orm_mode = True
+
 
 class LoginModel(BaseModel):
     email: EmailStr 
@@ -32,3 +35,17 @@ class QuestionModel(BaseModel):
     options: Optional[List[str]] = None
     correct_answers: Optional[List[str]] = None
     max_score: int = 1 
+
+    class Config:
+        orm_mode = True
+
+
+class ExamCreate(BaseModel):
+    title: str
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    duration: Optional[int] = None
+
+    class Config:
+        orm_mode = True
+
