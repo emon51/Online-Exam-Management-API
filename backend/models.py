@@ -1,12 +1,13 @@
 from database import Base
-from sqlalchemy import Column, Integer, String, JSON
-
+from sqlalchemy import Column, Integer, String, JSON, DateTime, Boolean, ForeignKey
+from uuid import uuid4
+from datetime import datetime
 
 
 
 class User(Base):
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True)
+    id = Column(String, default=lambda: str(uuid4()), primary_key=True)
     username = Column(String)
     email = Column(String)
     password = Column(String)
@@ -17,12 +18,13 @@ class User(Base):
 class Question(Base):
     __tablename__ = "questions"
 
-    id = Column(Integer, primary_key=True)
-    title = Column(String, unique=True)
+    id = Column(String, default=lambda: str(uuid4()), primary_key=True)
+    title = Column(String)
     type = Column(String)
     complexity = Column(String)
     options = Column(JSON, nullable=True)
     correct_answers = Column(JSON, nullable=True)
     max_score = Column(Integer, default=1)
 
-    
+
+

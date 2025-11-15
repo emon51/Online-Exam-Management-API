@@ -1,8 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request, UploadFile
 import schemas 
 from database import SessionLocal, Base, engine
 from sqlalchemy.orm import Session
 import models
+import openpyxl
+import json
+from io import BytesIO
 
 app = FastAPI(title="Online Exam Management API.")
 
@@ -16,6 +19,36 @@ def get_db():
     finally:
         db.close()
 
+#========================================================================================
+# Helper functions
+
+def get_user(request, db: Session):
+    user_id = request.headers.get("x-user-id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Please login first")
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    return user
+
+
+
+def parse_excel(file_obj):
+    wb = openpyxl.load_workbook(file_obj)
+    sheet = wb.active
+
+    rows = []
+
+    for row in sheet.iter_rows(min_row=2, values_only=True):
+        rows.append({
+            "title": row[0],
+            "type": row[1],
+            "complexity": row[2],
+            "options": row[3],
+            "correct_answers": row[4],
+            "max_score": row[5]
+        })
+
+    return rows
+#==================================================================
 @app.get('/')
 async def index():
     return {"message": "Welcome."}
@@ -66,3 +99,24 @@ async def questions(db: Session = Depends(get_db)):
         return all_questions
     else:
         raise HTTPException(status_code=404, detail="No questions found.")
+    
+
+
+@app.post('/upload-questions-xlsx')
+async def upload_questions(file: UploadFile, db: Session = Depends(get_db)):
+    content = await file.read()
+    data = parse_excel(BytesIO(content))
+    for q in data:
+        db_question = models.Question(
+            title=q["title"],
+            type=q["type"],
+            complexity=q["complexity"],
+            options=json.loads(q["options"]),
+            correct_answers=json.loads(q["correct_answers"]),
+            max_score=q["max_score"]
+        )
+        db.add(db_question)
+
+    db.commit()
+
+    return {"message": "Questions uploaded successfully."}
