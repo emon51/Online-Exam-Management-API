@@ -21,17 +21,7 @@ def get_db():
         db.close()
 
 #========================================================================================
-# Helper functions
-
-def get_user_from_header(request, db: Session):
-    user_id = request.headers.get("x-user-id")
-    if not user_id:
-        return None 
-        # raise HTTPException(status_code=401, detail="Please login first")
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    return user
-
-
+# Helper functions.
 
 def parse_excel(file_obj):
     wb = openpyxl.load_workbook(file_obj)
@@ -96,11 +86,7 @@ async def questions(db: Session = Depends(get_db)):
 
 
 @app.post("/questions/upload-xlsx")
-async def upload_questions(request: Request, file: UploadFile, db: Session = Depends(get_db)):
-    user = get_user_from_header(request, db)
-    if user and user.role != "admin":
-        pass
-        # raise HTTPException(status_code=403, detail="Admin only")
+async def upload_questions(file: UploadFile, db: Session = Depends(get_db)):
     content = await file.read()
     data = parse_excel(BytesIO(content))
     for q in data:
@@ -121,15 +107,43 @@ async def upload_questions(request: Request, file: UploadFile, db: Session = Dep
 
 
 @app.post("/exams/create")
-async def create_exam(exm: schemas.ExamCreate, request: Request, db: Session = Depends(get_db)):
-    user = get_user_from_header(request, db)
-    if user and user.role != "admin":
-        pass 
-        # raise HTTPException(status_code=403, detail="Admin only")
+async def create_exam(exm: schemas.ExamCreate, db: Session = Depends(get_db)):
     exam = models.Exam(**exm.dict())
     db.add(exam)
     db.commit()
     return {"message": "Exam created successfully."}
+
+
+
+@app.get("/exams/list")
+async def questions(db: Session = Depends(get_db)):
+    all_exams = db.query(models.Exam).all()
+    if all_exams:
+        return all_exams
+    else:
+        raise HTTPException(status_code=404, detail="No exams found.")
+
+
+# add questions to exam.
+@app.post("/exams/{exam_id}/add-questions")
+def add_questions_to_exam(exam_id: str, question_ids: List[str], db: Session = Depends(get_db)):
+    exam = db.query(models.Exam).filter(models.Exam.id == exam_id).first()
+    if not exam:
+        raise HTTPException(status_code=404, detail="Exam not found")
+    for qid in question_ids:
+        link = models.ExamQuestion(exam_id=exam_id, question_id=qid)
+        db.add(link)
+    db.commit()
+    return {"message": "Questions added to the exam."}
+
+
+@app.get("/exams/exam-question-list")
+async def questions(db: Session = Depends(get_db)):
+    all_records = db.query(models.ExamQuestion).all()
+    if all_records:
+        return all_records
+    else:
+        raise HTTPException(status_code=404, detail="Not found.")
 
 
 
