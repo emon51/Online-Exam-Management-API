@@ -6,6 +6,7 @@ import models
 import openpyxl
 import json
 from io import BytesIO
+from typing import List, Optional
 
 app = FastAPI(title="Online Exam Management API.")
 
@@ -22,10 +23,11 @@ def get_db():
 #========================================================================================
 # Helper functions
 
-def get_user(request, db: Session):
+def get_user_from_header(request, db: Session):
     user_id = request.headers.get("x-user-id")
     if not user_id:
-        raise HTTPException(status_code=401, detail="Please login first")
+        return None 
+        # raise HTTPException(status_code=401, detail="Please login first")
     user = db.query(models.User).filter(models.User.id == user_id).first()
     return user
 
@@ -60,8 +62,7 @@ async def signup(user: schemas.UserModel, db: Session = Depends(get_db)):
     db_user = models.User(**user.dict())
     db.add(db_user)
     db.commit()
-    db.refresh(db_user)
-    return {"user": user.dict()}
+    return db_user 
 
 @app.get('/users')
 async def users(db: Session=Depends(get_db)):
@@ -80,19 +81,11 @@ async def user_login(user: schemas.LoginModel, db: Session = Depends(get_db)):
     if user.password != db_user.password:
         raise HTTPException(status_code=400, detail="Invalid password.")
         
-    return {"message": f"Welcome {db_user.username}", "role": db_user.role}
+    return {"message": f"Welcome {db_user.username}", "user_id": db_user.id, "role": db_user.role}
 
-
-@app.post("/add-question")
-async def add_question(question: schemas.QuestionModel, db: Session = Depends(get_db)):
-    db_question = models.Question(**question.dict())
-    db.add(db_question)
-    db.commit()
-    db.refresh(db_question)
-    return {"question": question.dict()}
     
 
-@app.get("/questions")
+@app.get("/questions/list")
 async def questions(db: Session = Depends(get_db)):
     all_questions = db.query(models.Question).all()
     if all_questions:
@@ -102,8 +95,12 @@ async def questions(db: Session = Depends(get_db)):
     
 
 
-@app.post('/upload-questions-xlsx')
-async def upload_questions(file: UploadFile, db: Session = Depends(get_db)):
+@app.post("/questions/upload-xlsx")
+async def upload_questions(request: Request, file: UploadFile, db: Session = Depends(get_db)):
+    user = get_user_from_header(request, db)
+    if user and user.role != "admin":
+        pass
+        # raise HTTPException(status_code=403, detail="Admin only")
     content = await file.read()
     data = parse_excel(BytesIO(content))
     for q in data:
@@ -111,8 +108,8 @@ async def upload_questions(file: UploadFile, db: Session = Depends(get_db)):
             title=q["title"],
             type=q["type"],
             complexity=q["complexity"],
-            options=json.loads(q["options"]),
-            correct_answers=json.loads(q["correct_answers"]),
+            options=json.loads(q["options"]) if q["options"] else None,
+            correct_answers=json.loads(q["correct_answers"]) if q["correct_answers"] else None,
             max_score=q["max_score"]
         )
         db.add(db_question)
@@ -120,3 +117,19 @@ async def upload_questions(file: UploadFile, db: Session = Depends(get_db)):
     db.commit()
 
     return {"message": "Questions uploaded successfully."}
+
+
+
+@app.post("/exams/create")
+async def create_exam(exm: schemas.ExamCreate, request: Request, db: Session = Depends(get_db)):
+    user = get_user_from_header(request, db)
+    if user and user.role != "admin":
+        pass 
+        # raise HTTPException(status_code=403, detail="Admin only")
+    exam = models.Exam(**exm.dict())
+    db.add(exam)
+    db.commit()
+    return {"message": "Exam created successfully."}
+
+
+
