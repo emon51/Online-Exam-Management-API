@@ -189,7 +189,11 @@ async def get_exam_questions(exam_id: str, student_id: str, db: Session = Depend
 #==================================================================================================================
 
 # Submit exam.
+<<<<<<< HEAD
 @app.post("/exams/{exam_id}/submit/{student_id}", tags=["Exam"], description="Submit Exam by students")
+=======
+@app.post("/exams/{exam_id}/submit/{student_id}")
+>>>>>>> 662012ee1fb9fad131fb8863b22ecc6f9ac14c03
 async def submit_exam(exam_id: str, student_id: str, payload: schemas.SubmittedPayload, db: Session = Depends(get_db)):
     # Get all questions belonging to this exam.
     qids = [q.question_id for q in db.query(models.ExamQuestionBank).filter_by(exam_id=exam_id).all()]
