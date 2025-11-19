@@ -8,11 +8,12 @@ import json
 from io import BytesIO
 from typing import List, Optional
 
+
 #==================================================================================================================
 
 app = FastAPI(title="Online Exam Management API.")
 
-#==================================================================================================================
+#================================================================================================================== 
 
 Base.metadata.create_all(bind=engine)
 #==================================================================================================================
@@ -47,12 +48,12 @@ def parse_excel(file_obj):
     return rows
 #==================================================================================================================
 
-@app.get('/')
+@app.get('/', tags=["Testing"], description="Test inital setup")
 async def index():
     return {"message": "Welcome."}
 #==================================================================================================================
 
-@app.post('/signup')
+@app.post('/signup', tags=["Account"], description="Users registration")
 async def signup(user: schemas.UserModel, db: Session = Depends(get_db)):
     if db.query(models.User).filter(models.User.email == user.email).first():
         raise HTTPException(status_code=403, detail="Already registered.")
@@ -62,7 +63,7 @@ async def signup(user: schemas.UserModel, db: Session = Depends(get_db)):
     return db_user 
 #==================================================================================================================
 
-@app.get('/users')
+@app.get('/users',  tags=["Account"], description="List of users")
 async def users(db: Session=Depends(get_db)):
     all_users = db.query(models.User).all()
     if all_users:
@@ -72,7 +73,7 @@ async def users(db: Session=Depends(get_db)):
     
 #==================================================================================================================
 
-@app.post("/login")
+@app.post("/login", tags=["Account"], description="Users login")
 async def user_login(user: schemas.LoginModel, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if not db_user:
@@ -85,7 +86,7 @@ async def user_login(user: schemas.LoginModel, db: Session = Depends(get_db)):
     
 #==================================================================================================================
 
-@app.get("/questions/list")
+@app.get("/questions/list", tags=["Question Bank"], description="List of questions")
 async def questions(db: Session = Depends(get_db)):
     all_questions = db.query(models.Question).all()
     if all_questions:
@@ -96,7 +97,7 @@ async def questions(db: Session = Depends(get_db)):
 
 #==================================================================================================================
 
-@app.post("/questions/upload-xlsx")
+@app.post("/questions/upload-xlsx", tags=["Question Bank"], description="Upload excel file of questions")
 async def upload_questions(file: UploadFile, db: Session = Depends(get_db)):
     content = await file.read()
     data = parse_excel(BytesIO(content))
@@ -118,7 +119,7 @@ async def upload_questions(file: UploadFile, db: Session = Depends(get_db)):
 #==================================================================================================================
 
 
-@app.post("/exams/create")
+@app.post("/exams/create", tags=["Exam"], description="Create an Exam")
 async def create_exam(exm: schemas.ExamCreate, db: Session = Depends(get_db)):
     exam = models.Exam(**exm.dict())
     db.add(exam)
@@ -128,8 +129,8 @@ async def create_exam(exm: schemas.ExamCreate, db: Session = Depends(get_db)):
 
 #==================================================================================================================
 
-@app.get("/exams/list")
-async def questions(db: Session = Depends(get_db)):
+@app.get("/exams/list", tags=["Exam"], description="Exams list")
+async def exam_list(db: Session = Depends(get_db)):
     all_exams = db.query(models.Exam).all()
     if all_exams:
         return all_exams
@@ -139,7 +140,7 @@ async def questions(db: Session = Depends(get_db)):
 #==================================================================================================================
 
 # add questions to exam.
-@app.post("/exams/{exam_id}/add-questions")
+@app.post("/exams/{exam_id}/add-questions", tags=["Question Bank"], description="Add questiosn to an Exam")
 def add_questions_to_exam(exam_id: str, question_ids: List[str], db: Session = Depends(get_db)):
     exam = db.query(models.Exam).filter(models.Exam.id == exam_id).first()
     if not exam:
@@ -153,8 +154,8 @@ def add_questions_to_exam(exam_id: str, question_ids: List[str], db: Session = D
 #==================================================================================================================
 
 
-@app.get("/exams/exam-question-list")
-async def questions(db: Session = Depends(get_db)):
+@app.get("/exams/exam-question-list", tags=["Exam"], description="List of Exams with questions")
+async def exam_question_list(db: Session = Depends(get_db)):
     all_records = db.query(models.ExamQuestionBank).all()
     if all_records:
         return all_records
@@ -164,7 +165,7 @@ async def questions(db: Session = Depends(get_db)):
 #==================================================================================================================
 
 # Publish exam.
-@app.post("/exams/{exam_id}/publish")
+@app.post("/exams/{exam_id}/publish", tags=["Exam"], description="Published an Exam")
 async def publish_exam(exam_id: str, request: Request, db: Session = Depends(get_db)):
     
     exam = db.query(models.Exam).filter(models.Exam.id == exam_id).first()
@@ -178,7 +179,7 @@ async def publish_exam(exam_id: str, request: Request, db: Session = Depends(get
 
 
 # Get a specific exam's questions.
-@app.get("/exams/{exam_id}/questions/")
+@app.get("/exams/{exam_id}/questions/", tags=["Question Bank"], description="List of questions of an Exam")
 async def get_exam_questions(exam_id: str, student_id: str, db: Session = Depends(get_db)):
     records = db.query(models.ExamQuestionBank).filter(models.ExamQuestionBank.exam_id == exam_id).all()
     all_question_ids = [record.question_id for record in records]
@@ -188,8 +189,8 @@ async def get_exam_questions(exam_id: str, student_id: str, db: Session = Depend
 #==================================================================================================================
 
 # Submit exam.
-@app.post("/exams/{exam_id}/submit/{student_id}")
-async def submit_exam(exam_id: str, student_id: str, payload: schemas.SubmitPayload, db: Session = Depends(get_db)):
+@app.post("/exams/{exam_id}/submit/{student_id}", tags=["Exam"], description="Submit Exam by students")
+async def submit_exam(exam_id: str, student_id: str, payload: schemas.SubmittedPayload, db: Session = Depends(get_db)):
     # Get all questions belonging to this exam.
     qids = [q.question_id for q in db.query(models.ExamQuestionBank).filter_by(exam_id=exam_id).all()]
     questions = db.query(models.Question).filter(models.Question.id.in_(qids)).all()
@@ -232,7 +233,7 @@ async def submit_exam(exam_id: str, student_id: str, payload: schemas.SubmitPayl
 #==================================================================================================================
 # Get results for students.
 
-@app.get("/results/student/{student_id}")
+@app.get("/results/student/{student_id}", tags=["Results"], description="Get results by students")
 async def student_results(student_id: str, db: Session = Depends(get_db)):
     results = (db.query(models.Submission).filter(models.Submission.student_id == student_id).all())
 
@@ -256,7 +257,7 @@ async def student_results(student_id: str, db: Session = Depends(get_db)):
 
 #==================================================================================================================
 # Get results for admin.
-@app.get("/results/exam/{exam_id}")
+@app.get("/results/exam/{exam_id}", tags=["Results"], description="Get an Exam's result by Admins")
 async def exam_results(exam_id: str, db: Session = Depends(get_db)):
     results = (db.query(models.Submission).filter(models.Submission.exam_id == exam_id).all())
 
