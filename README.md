@@ -45,7 +45,7 @@ No authentication is currently implemented.
         published boolean
     }
 
-    EXAM_QUESTION_BANK {
+    EXAM_QUESTIONS {
         id string "PK"
         exam_id string "FK -> EXAMS.id  (1 exam has many questions)"
         question_id string "FK -> QUESTIONS.id  (1 question used in many exams)"
