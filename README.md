@@ -15,6 +15,61 @@ No authentication is currently implemented.
 - Submit answers
 - View scores after submission answers
 
+
+# ER-Diagram
+```
+
+    USERS {
+        id string "PK"
+        username string
+        email string
+        password string
+        role string
+    }
+
+    QUESTIONS {
+        id string "PK"
+        title string
+        type string
+        complexity string
+        options json "nullable"
+        correct_answers json "nullable"
+        max_score int
+    }
+
+    EXAMS {
+        id string "PK"
+        title string
+        start_time string
+        end_time string
+        duration int
+        published boolean
+    }
+
+    EXAM_QUESTION_BANK {
+        id string "PK"
+        exam_id string "FK"
+        question_id string "FK"
+    }
+
+    SUBMISSIONS {
+        id string "PK"
+        exam_id string "FK"
+        student_id string "FK"
+        answers json
+        score int
+        submitted boolean
+        submitted_at datetime
+    }
+
+    Relationships
+    USERS ||--o{ SUBMISSIONS : "submits"
+    EXAMS ||--o{ SUBMISSIONS : "has submissions"
+    EXAMS ||--o{ EXAM_QUESTIONS : "has questions"
+    QUESTIONS ||--o{ EXAM_QUESTIONS : "used in exams"
+
+```
+
 ## Setup
 
 1. **Clone the project**
